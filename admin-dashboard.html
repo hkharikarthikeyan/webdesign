@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard | EduAttend Centralized Attendance</title>
+  <link rel="stylesheet" href="css/style.css">
+  <!-- SheetJS for client-side Excel parsing & generation -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body id="adminDashboardLayout" class="admin-layout">
+
+  <!-- Sidebar Navigation -->
+  <aside class="admin-sidebar" id="adminSidebar">
+    <div class="sidebar-brand">
+      <div class="brand-logo-icon" style="width: 36px; height: 36px; font-size: 16px;">🛡️</div>
+      <div>
+        <h3>EduAttend</h3>
+        <span style="font-size: 0.75rem; color: var(--slate-400);">Admin Portal</span>
+      </div>
+    </div>
+
+    <ul class="sidebar-nav">
+      <li>
+        <a href="#dashboard" class="sidebar-link active" data-tab="dashboard" data-title="Dashboard Overview">
+          <span>📊</span> Dashboard
+        </a>
+      </li>
+      <li>
+        <a href="#students" class="sidebar-link" data-tab="students" data-title="Student Management">
+          <span>👥</span> Student Management
+        </a>
+      </li>
+      <li>
+        <a href="#classes" class="sidebar-link" data-tab="classes" data-title="Class Schedule Management">
+          <span>📅</span> Class Management
+        </a>
+      </li>
+      <li>
+        <a href="#attendance" class="sidebar-link" data-tab="attendance" data-title="Attendance Records & Reports">
+          <span>📝</span> Attendance Management
+        </a>
+      </li>
+      <li>
+        <a href="#excel" class="sidebar-link" data-tab="excel" data-title="Excel Import & Export">
+          <span>📑</span> Excel Import/Export
+        </a>
+      </li>
+      <li>
+        <a href="#settings" class="sidebar-link" data-tab="settings" data-title="System Settings">
+          <span>⚙️</span> Settings
+        </a>
+      </li>
+    </ul>
+
+    <div class="sidebar-footer">
+      <button type="button" id="btnLogout" class="sidebar-link" style="width: 100%; border: none; background: rgba(239, 68, 68, 0.15); color: #fca5a5;">
+        <span>🚪</span> Logout
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main Content Area -->
+  <div class="admin-main">
+    <!-- Topbar -->
+    <header class="admin-topbar">
+      <div class="topbar-left">
+        <button type="button" class="mobile-menu-btn" id="mobileMenuBtn">☰</button>
+        <h2 class="page-title" id="adminPageTitle">Dashboard Overview</h2>
+      </div>
+      <div class="topbar-right">
+        <div style="font-size: 0.85rem; font-weight: 600; color: var(--slate-600);" id="topbarServerTime">
+          Loading Server Time...
+        </div>
+        <div class="status-indicator-badge disabled" id="topbarPortalStatus">
+          <span class="pulse-dot closed"></span> Attendance DISABLED
+        </div>
+      </div>
+    </header>
+
+    <!-- Dynamic Tab Content Panels -->
+    <main class="admin-content">
+
+      <!-- ================================================================= -->
+      <!-- TAB 1: DASHBOARD -->
+      <!-- ================================================================= -->
+      <section id="panel-dashboard" class="tab-panel" style="display: block;">
+        <!-- Prominent Attendance Control Bar -->
+        <div class="attendance-control-banner">
+          <div class="control-banner-info">
+            <h4>Live Attendance Portal Control</h4>
+            <p id="activeClassSummary">Control student submissions centrally across all devices.</p>
+          </div>
+          <div class="control-buttons-group">
+            <button type="button" id="btnQuickEnable" class="btn-ctrl-enable">
+              ✓ ENABLE ATTENDANCE
+            </button>
+            <button type="button" id="btnQuickDisable" class="btn-ctrl-disable">
+              ✕ DISABLE ATTENDANCE
+            </button>
+          </div>
+        </div>
+
+        <!-- Metric KPI Cards -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon blue">👥</div>
+            <div class="stat-content">
+              <span class="stat-value" id="kpiTotalStudents">0</span>
+              <span class="stat-label">Total Students</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon purple">📅</div>
+            <div class="stat-content">
+              <span class="stat-value" id="kpiTotalClasses">0</span>
+              <span class="stat-label">Total Classes</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon green">✓</div>
+            <div class="stat-content">
+              <span class="stat-value" id="kpiPresentStudents">0</span>
+              <span class="stat-label">Present Students</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon red">✕</div>
+            <div class="stat-content">
+              <span class="stat-value" id="kpiAbsentStudents">0</span>
+              <span class="stat-label">Absent Students</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon amber">📈</div>
+            <div class="stat-content">
+              <span class="stat-value" id="kpiAttendancePercentage">0%</span>
+              <span class="stat-label">Attendance Rate</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Active Class Card -->
+        <div class="panel-card">
+          <div class="panel-header">
+            <h3 class="panel-title">Active / Current Session</h3>
+            <span class="badge badge-scheduled" id="activeClassBadge">Central Status</span>
+          </div>
+          <div style="padding: 24px;">
+            <h2 id="activeClassTitle" style="font-size: 1.4rem; color: var(--slate-800); margin-bottom: 8px;">No Active Class Session</h2>
+            <p id="activeClassTiming" style="color: var(--slate-500); margin-bottom: 12px;">Schedule or select a class to enable attendance.</p>
+            <p id="activeClassWindow" style="font-size: 0.9rem; font-weight: 600; color: var(--primary);">-</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================================= -->
+      <!-- TAB 2: STUDENT MANAGEMENT -->
+      <!-- ================================================================= -->
+      <section id="panel-students" class="tab-panel" style="display: none;">
+        <div class="panel-card">
+          <div class="panel-header">
+            <div>
+              <h3 class="panel-title">Registered Students</h3>
+              <span style="font-size: 0.8rem; color: var(--slate-500);" id="studentsCountBadge">0 students</span>
+            </div>
+            <div class="panel-actions">
+              <input
+                type="text"
+                id="studentSearchInput"
+                class="form-input"
+                placeholder="Search by Roll No or Name..."
+                style="width: 240px; padding: 8px 12px; font-size: 0.85rem;"
+              >
+              <button type="button" id="btnOpenUploadModal" class="btn-portal btn-primary" style="width: auto; padding: 8px 16px;">
+                📤 Upload Student Excel
+              </button>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Roll Number</th>
+                  <th>Student Name</th>
+                  <th>Email</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="studentsTableBody">
+                <tr><td colspan="5" style="text-align: center; padding: 24px;">Click Student Management to load records.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================================= -->
+      <!-- TAB 3: CLASS MANAGEMENT -->
+      <!-- ================================================================= -->
+      <section id="panel-classes" class="tab-panel" style="display: none;">
+        <div class="panel-card">
+          <div class="panel-header">
+            <div>
+              <h3 class="panel-title">Class Schedules</h3>
+              <span style="font-size: 0.8rem; color: var(--slate-500);" id="classesCountBadge">0 classes</span>
+            </div>
+            <div class="panel-actions">
+              <button type="button" id="btnOpenCreateClassModal" class="btn-portal btn-primary" style="width: auto; padding: 8px 16px;">
+                ➕ Create New Class
+              </button>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Class ID</th>
+                  <th>Class Name</th>
+                  <th>Date</th>
+                  <th>Class Timing</th>
+                  <th>Attendance Window</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="classesTableBody">
+                <tr><td colspan="8" style="text-align: center; padding: 24px;">Click Class Management to load schedules.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================================= -->
+      <!-- TAB 4: ATTENDANCE MANAGEMENT -->
+      <!-- ================================================================= -->
+      <section id="panel-attendance" class="tab-panel" style="display: none;">
+        <!-- Filters -->
+        <div class="panel-card" style="margin-bottom: 20px;">
+          <div style="padding: 16px 24px; display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end;">
+            <div style="flex: 1; min-width: 180px;">
+              <label class="form-label">Filter by Class</label>
+              <select id="attFilterClass" class="form-input">
+                <option value="">All Classes</option>
+              </select>
+            </div>
+            <div style="width: 160px;">
+              <label class="form-label">Filter by Date</label>
+              <input type="date" id="attFilterDate" class="form-input">
+            </div>
+            <div style="width: 150px;">
+              <label class="form-label">Status</label>
+              <select id="attFilterStatus" class="form-input">
+                <option value="">All</option>
+                <option value="PRESENT">PRESENT</option>
+                <option value="ABSENT">ABSENT</option>
+              </select>
+            </div>
+            <div style="flex: 1; min-width: 180px;">
+              <label class="form-label">Search Roll or Name</label>
+              <input type="text" id="attSearchInput" class="form-input" placeholder="Type roll or name...">
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" id="btnAttSearch" class="btn-portal btn-primary" style="width: auto; padding: 10px 18px;">
+                Filter
+              </button>
+              <button type="button" id="btnLoadClassReport" class="btn-portal btn-dark" style="width: auto; padding: 10px 18px;" title="View class report with Absent calculation">
+                Class Report
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Class Report Card (Computed Absent/Present Breakdown) -->
+        <div class="panel-card" id="classReportCard" style="display: none; border-left: 4px solid var(--primary);">
+          <div class="panel-header">
+            <div>
+              <h3 class="panel-title">Class Attendance Report: <span id="reportClassName">-</span></h3>
+              <span style="font-size: 0.85rem; color: var(--slate-500);" id="reportClassDate">-</span>
+            </div>
+            <div style="display: flex; gap: 16px; font-size: 0.9rem;">
+              <span>Total: <strong id="reportTotalStudents">0</strong></span>
+              <span style="color: var(--success-dark);">Present: <strong id="reportPresentCount">0</strong></span>
+              <span style="color: var(--danger);">Absent: <strong id="reportAbsentCount">0</strong></span>
+              <span style="color: var(--primary);">Rate: <strong id="reportPercentage">0%</strong></span>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Roll Number</th>
+                  <th>Student Name</th>
+                  <th>Submission Time</th>
+                  <th>Status</th>
+                  <th>Attendance ID</th>
+                </tr>
+              </thead>
+              <tbody id="classReportTableBody">
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Live Attendance Submissions Table -->
+        <div class="panel-card">
+          <div class="panel-header">
+            <div>
+              <h3 class="panel-title">Attendance Submissions Log</h3>
+              <span style="font-size: 0.8rem; color: var(--slate-500);" id="attRecordCount">0 records</span>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Roll Number</th>
+                  <th>Student Name</th>
+                  <th>Class Name</th>
+                  <th>Date</th>
+                  <th>Submission Time</th>
+                  <th>Status</th>
+                  <th>Attendance ID</th>
+                </tr>
+              </thead>
+              <tbody id="attendanceTableBody">
+                <tr><td colspan="7" style="text-align: center; padding: 24px;">No records loaded.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================================= -->
+      <!-- TAB 5: EXCEL IMPORT / EXPORT -->
+      <!-- ================================================================= -->
+      <section id="panel-excel" class="tab-panel" style="display: none;">
+        <!-- Export Section -->
+        <div class="panel-card">
+          <div class="panel-header">
+            <h3 class="panel-title">Excel Reports & Data Export (SheetJS)</h3>
+          </div>
+          <div style="padding: 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+            <div style="background: var(--slate-50); padding: 20px; border-radius: var(--radius-md); border: 1px solid var(--slate-200);">
+              <h4 style="font-size: 1rem; margin-bottom: 6px;">1. Registered Students List</h4>
+              <p style="font-size: 0.85rem; color: var(--slate-500); margin-bottom: 16px;">Download active 37 student master list as .xlsx</p>
+              <button type="button" id="btnExportStudents" class="btn-portal btn-primary">
+                📥 Export Students List (.xlsx)
+              </button>
+            </div>
+
+            <div style="background: var(--slate-50); padding: 20px; border-radius: var(--radius-md); border: 1px solid var(--slate-200);">
+              <h4 style="font-size: 1rem; margin-bottom: 6px;">2. Complete Attendance History</h4>
+              <p style="font-size: 0.85rem; color: var(--slate-500); margin-bottom: 16px;">Export all recorded attendance entries across all sessions</p>
+              <button type="button" id="btnExportHistory" class="btn-portal btn-dark">
+                📥 Export All Attendance (.xlsx)
+              </button>
+            </div>
+
+            <div style="background: var(--slate-50); padding: 20px; border-radius: var(--radius-md); border: 1px solid var(--slate-200);">
+              <h4 style="font-size: 1rem; margin-bottom: 6px;">3. Class Report (With Absentees)</h4>
+              <p style="font-size: 0.85rem; color: var(--slate-500); margin-bottom: 10px;">Generates full report with PRESENT & calculated ABSENT students</p>
+              <select id="exportSelectClass" class="form-input" style="margin-bottom: 12px;">
+                <option value="">-- Select Class --</option>
+              </select>
+              <button type="button" id="btnExportClassReport" class="btn-portal btn-primary">
+                📥 Export Class Report (.xlsx)
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Import Section -->
+        <div class="panel-card">
+          <div class="panel-header">
+            <div>
+              <h3 class="panel-title">Upload & Import Students Excel</h3>
+              <span style="font-size: 0.8rem; color: var(--slate-500);">Expected columns: Roll Number, Student Name, Email (optional)</span>
+            </div>
+            <div>
+              <button type="button" id="btnDownloadSampleTemplate" class="btn-portal btn-dark" style="width: auto; padding: 6px 14px; font-size: 0.8rem;">
+                📥 Download 37-Student Sample Template (.xlsx)
+              </button>
+            </div>
+          </div>
+          <div style="padding: 24px;">
+            <div class="dropzone" id="excelDropzone">
+              <div class="dropzone-icon">📁</div>
+              <h4 style="margin-bottom: 4px;">Drag & Drop your Excel file here (.xlsx or .xls)</h4>
+              <p style="font-size: 0.85rem; color: var(--slate-500);">or click to browse your computer</p>
+              <input type="file" id="excelFileInput" accept=".xlsx, .xls" style="display: none;">
+            </div>
+
+            <!-- Preview Card -->
+            <div id="excelPreviewCard" style="display: none; margin-top: 24px;">
+              <div id="excelPreviewSummary" style="font-size: 0.9rem; margin-bottom: 12px; padding: 10px 14px; background: var(--slate-100); border-radius: var(--radius-sm);">
+              </div>
+              <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Roll Number</th>
+                      <th>Student Name</th>
+                      <th>Email</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="excelPreviewTableBody">
+                  </tbody>
+                </table>
+              </div>
+              <div style="margin-top: 16px; display: flex; justify-content: flex-end; gap: 12px;">
+                <button type="button" id="btnConfirmExcelUpload" class="btn-portal btn-primary" style="width: auto;">
+                  Save Students to Database
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================================= -->
+      <!-- TAB 6: SETTINGS -->
+      <!-- ================================================================= -->
+      <section id="panel-settings" class="tab-panel" style="display: none;">
+        <div class="panel-card">
+          <div class="panel-header">
+            <h3 class="panel-title">System & Connection Configuration</h3>
+          </div>
+          <div style="padding: 24px; max-width: 640px;">
+            <div class="form-group">
+              <label class="form-label">Google Apps Script Web App API URL</label>
+              <input
+                type="url"
+                id="settingsApiUrlInput"
+                class="form-input"
+                placeholder="https://script.google.com/macros/s/AKfycb.../exec"
+              >
+              <span style="font-size: 0.78rem; color: var(--slate-500); display: block; margin-top: 4px;">
+                Obtain this from Google Apps Script Editor &gt; Deploy &gt; Manage deployments &gt; Web app URL.
+              </span>
+            </div>
+            <div style="display: flex; gap: 12px; margin-bottom: 28px;">
+              <button type="button" id="btnSaveApiUrl" class="btn-portal btn-primary" style="width: auto; padding: 8px 18px;">
+                Save API URL
+              </button>
+              <button type="button" id="btnTestConnection" class="btn-portal btn-dark" style="width: auto; padding: 8px 18px;">
+                Test API Connection
+              </button>
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid var(--slate-200); margin: 24px 0;">
+
+            <div class="form-group">
+              <label class="form-label">Initialize Google Spreadsheet Structure</label>
+              <p style="font-size: 0.85rem; color: var(--slate-500); margin-bottom: 12px;">
+                Automatically ensures the four worksheets (<code>Students</code>, <code>Classes</code>, <code>Attendance</code>, <code>Settings</code>) exist with exact required headers.
+              </p>
+              <button type="button" id="btnInitializeDatabase" class="btn-portal btn-dark" style="width: auto;">
+                Initialize Database Sheets
+              </button>
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid var(--slate-200); margin: 24px 0;">
+
+            <div>
+              <h4 style="font-size: 1rem; margin-bottom: 8px;">Authoritative Timezone</h4>
+              <p style="font-size: 0.85rem; color: var(--slate-600);">
+                Configured as: <strong>Asia/Kolkata (IST - UTC+05:30)</strong>.<br>
+                All student attendance openings, closures, and submission timestamps are verified server-side.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODALS -->
+  <!-- ===================================================================== -->
+
+  <!-- Modal: Enable Attendance Confirmation -->
+  <div class="modal-overlay" id="modalEnableAttendance">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Enable Attendance Session</h3>
+        <button type="button" class="modal-close" id="btnCancelEnableAttendance">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.9rem; color: var(--slate-600); margin-bottom: 16px;">
+          Select the class schedule you wish to open for attendance. Attendance can only be enabled if current server date matches the class date and the time is within the configured window.
+        </p>
+        <div class="form-group">
+          <label class="form-label">Select Class</label>
+          <select id="selectClassToEnable" class="form-input">
+            <option value="">-- Select Class --</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-portal btn-primary" id="btnConfirmEnableAttendance" style="width: auto;">
+          Enable Attendance Now
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Create New Class Schedule -->
+  <div class="modal-overlay" id="modalCreateClass">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Create New Class Schedule</h3>
+        <button type="button" class="modal-close" id="btnCloseCreateClassModal">&times;</button>
+      </div>
+      <form id="formCreateClass">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Class Name *</label>
+            <input type="text" id="classNameInput" class="form-input" placeholder="e.g. HTML & CSS Mastery" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Class Date *</label>
+            <input type="date" id="classDateInput" class="form-input" required>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="form-group">
+              <label class="form-label">Class Start Time *</label>
+              <input type="time" id="classStartTimeInput" class="form-input" value="19:00" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Class End Time *</label>
+              <input type="time" id="classEndTimeInput" class="form-input" value="20:00" required>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="form-group">
+              <label class="form-label">Attendance Opening Time *</label>
+              <input type="time" id="classOpeningTimeInput" class="form-input" value="19:00" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Attendance Closing Time *</label>
+              <input type="time" id="classClosingTimeInput" class="form-input" value="19:15" required>
+            </div>
+          </div>
+          <p style="font-size: 0.78rem; color: var(--slate-500);">
+            Note: Attendance window must fall strictly between class start time and end time.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn-portal btn-primary" style="width: auto;">
+            Save Class Schedule
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Upload Student Excel -->
+  <div class="modal-overlay" id="modalUploadStudents">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Upload Students Master Excel</h3>
+        <button type="button" class="modal-close" id="btnCloseUploadModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.9rem; color: var(--slate-600); margin-bottom: 14px;">
+          Upload your Excel workbook (.xlsx or .xls) with the 37 registered students. Existing historical attendance records will never be deleted.
+        </p>
+        <p style="font-size: 0.85rem; color: var(--slate-500); margin-bottom: 16px;">
+          Go to the <strong>Excel Import/Export</strong> tab on the sidebar to preview and import the file with SheetJS.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-portal btn-primary" onclick="document.querySelector('[data-tab=excel]').click(); document.getElementById('modalUploadStudents').classList.remove('active');" style="width: auto;">
+          Go to Import Page
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/excel.js"></script>
+  <script src="js/attendance.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>
+

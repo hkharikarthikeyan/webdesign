@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Attendance Portal | EduAttend</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="student-page-body">
+
+  <!-- Student Header -->
+  <header class="student-header">
+    <div class="student-header-inner">
+      <div class="brand-badge">
+        <div class="brand-logo-icon" style="width: 36px; height: 36px; font-size: 16px;">🎓</div>
+        <div>
+          <h1 style="font-size: 1.05rem; font-weight: 700; margin: 0; color: var(--slate-800);">EduAttend</h1>
+          <span style="font-size: 0.75rem; color: var(--slate-500);">Student Attendance Portal</span>
+        </div>
+      </div>
+      <div class="header-time-pill">
+        <span class="pulse-dot online" id="pulseIndicator"></span>
+        <span id="serverTimeDisplay">Server Time: Loading...</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="student-container">
+
+    <!-- Live Status Banner -->
+    <div class="status-card idle" id="statusCard">
+      <div class="status-icon-box" id="statusIcon">ℹ</div>
+      <div class="status-info">
+        <h3 id="statusTitle">Connecting...</h3>
+        <p id="statusMessage">Checking real-time attendance status with the server...</p>
+      </div>
+    </div>
+
+    <!-- Active Class Details Card -->
+    <div class="class-info-card" id="classDetailsCard" style="display: none;">
+      <div class="card-title-sub">Current Scheduled Session</div>
+      <div class="class-title-text" id="displayClassName">Class Session</div>
+      <div class="meta-grid">
+        <div class="meta-item">
+          <span class="meta-label">Date</span>
+          <span class="meta-value" id="displayClassDate">-</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Class Timing</span>
+          <span class="meta-value" id="displayClassTiming">-</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Attendance Window</span>
+          <span class="meta-value" id="displayAttendanceWindow">-</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Timezone</span>
+          <span class="meta-value">Asia/Kolkata (IST)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Attendance Action Box -->
+    <div class="attendance-box" id="attendanceBox">
+      <!-- Error Message Box -->
+      <div id="studentErrorAlert" class="status-card closed" style="display: none; padding: 12px 16px; margin-bottom: 16px; font-size: 0.9rem;">
+      </div>
+
+      <!-- Step 1: Roll Number Input & Verification -->
+      <div class="attendance-step" id="stepVerification">
+        <label for="studentRollInput" class="step-label">ENTER YOUR ROLL NUMBER</label>
+        <div class="input-roll-group">
+          <input
+            type="text"
+            id="studentRollInput"
+            class="input-roll"
+            placeholder="e.g. STU-001"
+            autocomplete="off"
+            autocapitalize="characters"
+            spellcheck="false"
+          >
+        </div>
+        <button type="button" id="btnVerifyRoll" class="btn-large btn-verify">
+          Verify Roll Number
+        </button>
+      </div>
+
+      <!-- Step 2: Student Verified Confirmation Banner -->
+      <div class="student-verified-banner" id="verifiedBanner" style="display: none;">
+        <div class="verified-avatar">✓</div>
+        <div class="verified-text" style="flex: 1;">
+          <h4 id="verifiedStudentName">Student Name</h4>
+          <p id="verifiedRollNumber">Roll No</p>
+        </div>
+        <button type="button" id="btnResetVerification" style="background: none; border: none; color: #166534; font-size: 0.8rem; cursor: pointer; text-decoration: underline;">
+          Change
+        </button>
+      </div>
+
+      <!-- Step 3: Mark Attendance Button -->
+      <div style="margin-top: 20px;">
+        <button type="button" id="btnSubmitAttendance" class="btn-large btn-submit-attendance" disabled>
+          <span>Verify Roll Number First</span>
+        </button>
+      </div>
+
+      <p style="font-size: 0.75rem; color: var(--slate-400); text-align: center; margin-top: 16px;">
+        Attendance can only be submitted during the configured class window. Submissions are timestamped using server time.
+      </p>
+    </div>
+
+    <!-- Success Receipt Card -->
+    <div class="attendance-box submission-success-card" id="submissionSuccessCard" style="display: none;">
+      <div class="success-check-icon">✓</div>
+      <h2 style="font-size: 1.4rem; color: var(--slate-800); margin-bottom: 6px;">Attendance Submitted!</h2>
+      <p style="color: var(--slate-600); font-size: 0.95rem;">
+        Your attendance has been submitted successfully!
+      </p>
+
+      <div class="receipt-box">
+        <div class="receipt-row">
+          <span style="color: var(--slate-500);">Attendance ID</span>
+          <strong id="receiptAttId">ATT-XXXX</strong>
+        </div>
+        <div class="receipt-row">
+          <span style="color: var(--slate-500);">Student Name</span>
+          <strong id="receiptStudentName">-</strong>
+        </div>
+        <div class="receipt-row">
+          <span style="color: var(--slate-500);">Roll Number</span>
+          <strong id="receiptRoll">-</strong>
+        </div>
+        <div class="receipt-row">
+          <span style="color: var(--slate-500);">Class Session</span>
+          <strong id="receiptClassName">-</strong>
+        </div>
+        <div class="receipt-row">
+          <span style="color: var(--slate-500);">Submission Time</span>
+          <strong id="receiptTime">-</strong>
+        </div>
+        <div class="receipt-row">
+          <span style="color: var(--slate-500);">Status</span>
+          <span class="badge badge-present">PRESENT</span>
+        </div>
+      </div>
+
+      <p style="font-size: 0.8rem; color: var(--slate-500);">
+        Recorded centrally in Google Sheets. You may safely close this page.
+      </p>
+    </div>
+
+  </main>
+
+  <!-- Client Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/student.js"></script>
+</body>
+</html>
+
