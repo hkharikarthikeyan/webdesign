@@ -152,22 +152,33 @@ function requireAuth(params, handlerFunction) {
  */
 function validateAdminSession(token) {
   var props = PropertiesService.getScriptProperties();
-  var savedToken = props.getProperty("ADMIN_SESSION_TOKEN");
-  var expiryStr = props.getProperty("ADMIN_SESSION_EXPIRY");
+  var sessions = getAdminSessions();
+  var session = sessions[token];
 
-  if (!savedToken || savedToken !== token) {
+  if (!session) {
     return { valid: false, reason: "Invalid session token. Please log in again." };
   }
 
-  var expiry = parseInt(expiryStr, 10);
+  var expiry = parseInt(session.expiresAt, 10);
   var now = new Date().getTime();
   if (isNaN(expiry) || now > expiry) {
-    props.deleteProperty("ADMIN_SESSION_TOKEN");
-    props.deleteProperty("ADMIN_SESSION_EXPIRY");
+    delete sessions[token];
+    props.setProperty("ADMIN_SESSIONS", JSON.stringify(sessions));
     return { valid: false, reason: "Session expired. Please log in again." };
   }
 
-  return { valid: true };
+  return { valid: true, username: session.username };
+}
+
+function getAdminSessions() {
+  var raw = PropertiesService.getScriptProperties().getProperty("ADMIN_SESSIONS");
+  if (!raw) return {};
+
+  try {
+    return JSON.parse(raw);
+  } catch (err) {
+    return {};
+  }
 }
 
 /**
@@ -227,12 +238,8 @@ function setupDatabase() {
   ensureSetting(settingsSheet, "activeClassId", "", "Current Active Class ID for Attendance");
   ensureSetting(settingsSheet, "systemName", "Centralized Student Attendance System", "Application Name");
 
-  // Ensure Admin default credentials in Script Properties if not set
-  var props = PropertiesService.getScriptProperties();
-  if (!props.getProperty("ADMIN_USERNAME")) {
-    props.setProperty("ADMIN_USERNAME", "admin");
-    props.setProperty("ADMIN_PASSWORD", "Admin@1234");
-  }
+  // Initialize the multi-admin account list if it does not exist.
+  initializeAdminAccounts();
 
   return {
     status: "Database initialized successfully",
@@ -317,6 +324,19 @@ function getServerTimeString() {
  */
 function parseTimeToMinutes(timeStr) {
   if (!timeStr) return -1;
+
+  if (timeStr instanceof Date) {
+    var dateTime = Utilities.formatDate(timeStr, TIMEZONE, "HH:mm");
+    return parseTimeToMinutes(dateTime);
+  }
+
+  if (typeof timeStr === "number") {
+    var numericMinutes = Math.round(timeStr * 24 * 60);
+    if (numericMinutes >= 0 && numericMinutes < 1440) {
+      return numericMinutes;
+    }
+  }
+
   var str = String(timeStr).trim().toUpperCase();
 
   var isPM = str.indexOf("PM") > -1;
@@ -335,6 +355,16 @@ function parseTimeToMinutes(timeStr) {
   if (isAM && hours === 12) hours = 0;
 
   return hours * 60 + minutes;
+}
+
+function normalizeTimeString(timeVal) {
+  var minutes = parseTimeToMinutes(timeVal);
+  if (minutes < 0) return "";
+
+  var hours = Math.floor(minutes / 60);
+  var mins = minutes % 60;
+  return (hours < 10 ? "0" : "") + hours + ":" +
+    (mins < 10 ? "0" : "") + mins;
 }
 
 /**
@@ -363,6 +393,82 @@ function normalizeDateString(dateVal) {
  * ADMIN AUTHENTICATION
  * ============================================================================
  */
+function hashPassword(password) {
+  var digest = Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256,
+    String(password),
+    Utilities.Charset.UTF_8
+  );
+
+  return digest.map(function (byte) {
+    var hex = (byte & 0xff).toString(16);
+    return hex.length === 1 ? "0" + hex : hex;
+  }).join("");
+}
+
+function initializeAdminAccounts() {
+  var props = PropertiesService.getScriptProperties();
+  var raw = props.getProperty("ADMINS_JSON");
+  var admins = [];
+
+  if (raw) {
+    try {
+      admins = JSON.parse(raw);
+      if (!Array.isArray(admins)) admins = [];
+    } catch (err) {
+      admins = [];
+    }
+  } else {
+    var legacyUsername = String(props.getProperty("ADMIN_USERNAME") || "admin").trim();
+    var legacyPassword = String(props.getProperty("ADMIN_PASSWORD") || "Admin@1234").trim();
+    admins.push({
+      username: legacyUsername,
+      passwordHash: hashPassword(legacyPassword),
+      active: true
+    });
+  }
+
+  var defaultAccounts = [
+    { username: "Sanjay", password: "sanjay@123" },
+    { username: "Vasanth", password: "Vasanth@123" }
+  ];
+
+  defaultAccounts.forEach(function (account) {
+    var exists = admins.some(function (admin) {
+      return String(admin.username).trim().toLowerCase() === account.username.toLowerCase();
+    });
+
+    if (!exists) {
+      admins.push({
+        username: account.username,
+        passwordHash: hashPassword(account.password),
+        active: true
+      });
+    }
+  });
+
+  props.setProperty("ADMINS_JSON", JSON.stringify(admins));
+  props.deleteProperty("ADMIN_USERNAME");
+  props.deleteProperty("ADMIN_PASSWORD");
+  props.deleteProperty("ADMIN_SESSION_TOKEN");
+  props.deleteProperty("ADMIN_SESSION_EXPIRY");
+}
+
+function getAdminAccounts() {
+  var props = PropertiesService.getScriptProperties();
+  var raw = props.getProperty("ADMINS_JSON");
+  if (!raw) {
+    initializeAdminAccounts();
+    raw = props.getProperty("ADMINS_JSON");
+  }
+
+  try {
+    return JSON.parse(raw);
+  } catch (err) {
+    return [];
+  }
+}
+
 function adminLogin(params) {
   var username = String(params.username || "").trim();
   var password = String(params.password || "").trim();
@@ -372,19 +478,34 @@ function adminLogin(params) {
   }
 
   var props = PropertiesService.getScriptProperties();
-  var storedUser = props.getProperty("ADMIN_USERNAME") || "admin";
-  var storedPass = props.getProperty("ADMIN_PASSWORD") || "Admin@1234";
+  var passwordHash = hashPassword(password);
+  var admin = null;
+  var admins = getAdminAccounts();
 
-  if (username !== storedUser || password !== storedPass) {
+  for (var i = 0; i < admins.length; i++) {
+    if (
+      String(admins[i].username).trim().toLowerCase() === username.toLowerCase() &&
+      admins[i].passwordHash === passwordHash &&
+      admins[i].active !== false
+    ) {
+      admin = admins[i];
+      break;
+    }
+  }
+
+  if (!admin) {
     return jsonResponse(false, "Invalid username or password.", null);
   }
 
   // Generate secure random session token
   var token = Utilities.getUuid() + "-" + new Date().getTime();
   var expiry = new Date().getTime() + SESSION_DURATION_MS;
-
-  props.setProperty("ADMIN_SESSION_TOKEN", token);
-  props.setProperty("ADMIN_SESSION_EXPIRY", expiry.toString());
+  var sessions = getAdminSessions();
+  sessions[token] = {
+    username: admin.username,
+    expiresAt: expiry
+  };
+  props.setProperty("ADMIN_SESSIONS", JSON.stringify(sessions));
 
   return jsonResponse(true, "Login successful.", {
     sessionToken: token,
@@ -395,8 +516,12 @@ function adminLogin(params) {
 
 function adminLogout(params) {
   var props = PropertiesService.getScriptProperties();
-  props.deleteProperty("ADMIN_SESSION_TOKEN");
-  props.deleteProperty("ADMIN_SESSION_EXPIRY");
+  var token = params.sessionToken || params.token;
+  var sessions = getAdminSessions();
+  if (token && sessions[token]) {
+    delete sessions[token];
+    props.setProperty("ADMIN_SESSIONS", JSON.stringify(sessions));
+  }
   return jsonResponse(true, "Logged out successfully.", null);
 }
 
@@ -409,13 +534,35 @@ function changeAdminPassword(params) {
   }
 
   var props = PropertiesService.getScriptProperties();
-  var storedPass = props.getProperty("ADMIN_PASSWORD") || "Admin@1234";
+  var token = params.sessionToken || params.token;
+  var sessions = getAdminSessions();
+  var session = sessions[token];
+  if (!session) {
+    return jsonResponse(false, "Unauthorized session.", null);
+  }
 
-  if (currentPassword !== storedPass) {
+  var admins = getAdminAccounts();
+  var adminIndex = -1;
+  var currentHash = hashPassword(currentPassword);
+
+  for (var i = 0; i < admins.length; i++) {
+    if (
+      String(admins[i].username).trim().toLowerCase() === String(session.username).trim().toLowerCase()
+    ) {
+      adminIndex = i;
+      break;
+    }
+  }
+
+  if (
+    adminIndex === -1 ||
+    admins[adminIndex].passwordHash !== currentHash
+  ) {
     return jsonResponse(false, "Current password does not match.", null);
   }
 
-  props.setProperty("ADMIN_PASSWORD", newPassword);
+  admins[adminIndex].passwordHash = hashPassword(newPassword);
+  props.setProperty("ADMINS_JSON", JSON.stringify(admins));
   return jsonResponse(true, "Password updated successfully.", null);
 }
 
@@ -698,10 +845,10 @@ function getStudentsList(params) {
 function createClass(params) {
   var className = String(params.className || "").trim();
   var classDate = normalizeDateString(params.classDate);
-  var startTime = String(params.startTime || "").trim();
-  var endTime = String(params.endTime || "").trim();
-  var openingTime = String(params.openingTime || "").trim();
-  var closingTime = String(params.closingTime || "").trim();
+  var startTime = normalizeTimeString(params.startTime);
+  var endTime = normalizeTimeString(params.endTime);
+  var openingTime = normalizeTimeString(params.openingTime);
+  var closingTime = normalizeTimeString(params.closingTime);
 
   // Validations
   if (!className) {
@@ -803,10 +950,10 @@ function updateClass(params) {
 
   var className = String(params.className || data[rowIndex - 1][1]).trim();
   var classDate = normalizeDateString(params.classDate || data[rowIndex - 1][2]);
-  var startTime = String(params.startTime || data[rowIndex - 1][3]).trim();
-  var endTime = String(params.endTime || data[rowIndex - 1][4]).trim();
-  var openingTime = String(params.openingTime || data[rowIndex - 1][5]).trim();
-  var closingTime = String(params.closingTime || data[rowIndex - 1][6]).trim();
+  var startTime = normalizeTimeString(params.startTime || data[rowIndex - 1][3]);
+  var endTime = normalizeTimeString(params.endTime || data[rowIndex - 1][4]);
+  var openingTime = normalizeTimeString(params.openingTime || data[rowIndex - 1][5]);
+  var closingTime = normalizeTimeString(params.closingTime || data[rowIndex - 1][6]);
 
   var startMin = parseTimeToMinutes(startTime);
   var endMin = parseTimeToMinutes(endTime);
@@ -907,8 +1054,8 @@ function enableAttendance(params) {
   }
 
   var classDate = normalizeDateString(classRow[2]);
-  var openingTime = String(classRow[5]).trim();
-  var closingTime = String(classRow[6]).trim();
+  var openingTime = normalizeTimeString(classRow[5]);
+  var closingTime = normalizeTimeString(classRow[6]);
 
   var serverDate = getServerDateString();
   var serverTime = getServerTimeString();
@@ -1019,10 +1166,10 @@ function getAttendanceStatus(params) {
 
   var className = classRow[1];
   var classDate = normalizeDateString(classRow[2]);
-  var startTime = classRow[3];
-  var endTime = classRow[4];
-  var openingTime = classRow[5];
-  var closingTime = classRow[6];
+  var startTime = normalizeTimeString(classRow[3]);
+  var endTime = normalizeTimeString(classRow[4]);
+  var openingTime = normalizeTimeString(classRow[5]);
+  var closingTime = normalizeTimeString(classRow[6]);
   var adminStatus = classRow[7] || "SCHEDULED";
 
   result.classDetails = {

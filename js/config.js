@@ -7,7 +7,7 @@
 const CONFIG = {
   // Replace this with your actual Google Apps Script Web App URL after deployment
   // Example: "https://script.google.com/macros/s/AKfycbx.../exec"
-  API_BASE_URL: localStorage.getItem("csams_api_url") || "YOUR_DEPLOYED_APPS_SCRIPT_URL_HERE",
+  API_BASE_URL: localStorage.getItem("csams_api_url") || "https://script.google.com/macros/s/AKfycbxPAsGAQdJDL5Ihf1JQnOl69oF7UfKzZas7MAfVQptkPdT67AaJ_YYIZVyImuOESbvN/exec",
 
   // Authoritative Timezone
   TIMEZONE: "Asia/Kolkata",

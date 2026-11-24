@@ -114,10 +114,12 @@ Create one Google Spreadsheet with the following four worksheets:
 ### Step 4: Configure Project Timezone & Script Properties
 1. In the Apps Script left sidebar, click the **Gear icon (Project Settings)**.
 2. Check the box **"Show 'appsscript.json' manifest file in editor"**.
-3. Under **Script Properties**, click **Edit script properties &gt; Add script property**:
-   - Property: `ADMIN_USERNAME` | Value: `admin`
-   - Property: `ADMIN_PASSWORD` | Value: `Admin@1234` (or your chosen secure password)
-4. Go back to the **Editor**, click `appsscript.json`, and ensure the timeZone is:
+3. Remove the old `ADMIN_USERNAME` and `ADMIN_PASSWORD` entries if they are present. They are legacy properties and cannot represent multiple admins.
+4. Run `setupDatabase` once. It creates `ADMINS_JSON` with the default accounts:
+   - `admin` / `Admin@1234`
+   - `Sanjay` / `sanjay@123`
+   - `Vasanth` / `Vasanth@123`
+5. Go back to the **Editor**, click `appsscript.json`, and ensure the timeZone is:
    ```json
    {
      "timeZone": "Asia/Kolkata",

@@ -318,7 +318,10 @@ async function handleSubmitAttendance() {
     showToast("Attendance submitted successfully!", "success");
 
   } catch (err) {
-    showErrorAlert("Submission failed due to a network error. Please try again.");
+    showErrorAlert(
+      "Submission failed: " +
+      (err.message || "Network or server error. Please try again.")
+    );
     btnSubmit.disabled = false;
     btnSubmit.innerHTML = `<span>MARK ATTENDANCE</span> ➔`;
   }

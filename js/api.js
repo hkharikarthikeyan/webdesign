@@ -35,32 +35,55 @@ const API = {
       ...payload
     };
 
-    try {
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        mode: "cors",
-        redirect: "follow",
-        headers: {
-          "Content-Type": "text/plain;charset=utf-8"
-        },
-        body: JSON.stringify(bodyData)
-      });
+    const postRequest = async () => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 25000);
 
-      if (!response.ok) {
-        throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+      try {
+        const response = await fetch(apiUrl, {
+          method: "POST",
+          mode: "cors",
+          credentials: "omit",
+          redirect: "follow",
+          cache: "no-store",
+          headers: {
+            "Content-Type": "text/plain;charset=utf-8"
+          },
+          body: JSON.stringify(bodyData),
+          signal: controller.signal
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+        }
+
+        const responseText = await response.text();
+        try {
+          return JSON.parse(responseText);
+        } catch (jsonError) {
+          throw new Error("Invalid server response: " + responseText.substring(0, 120));
+        }
+      } finally {
+        clearTimeout(timeoutId);
       }
+    };
 
-      const json = await response.json();
-      return json;
+    try {
+      return await postRequest();
+    } catch (firstError) {
+      await new Promise((resolve) => setTimeout(resolve, 800));
 
-    } catch (error) {
-      console.error(`API Error on action "${action}":`, error);
-      return {
-        success: false,
-        message: "Network or Server Error: " + error.message,
-        data: null,
-        error: error
-      };
+      try {
+        return await postRequest();
+      } catch (secondError) {
+        console.error(`API Error on action "${action}":`, secondError);
+        return {
+          success: false,
+          message: "Network or Server Error: " + (secondError.message || "Failed to fetch"),
+          data: null,
+          error: secondError
+        };
+      }
     }
   },
 
@@ -79,7 +102,9 @@ const API = {
    * Verify roll number against Students worksheet
    */
   async getStudentDetails(rollNumber) {
-    return this.request("getStudentDetails", { rollNumber: rollNumber.trim() });
+    return this.request("getStudentDetails", {
+      rollNumber: String(rollNumber ?? "").trim()
+    });
   },
 
   /**
@@ -87,8 +112,8 @@ const API = {
    */
   async submitAttendance(rollNumber, classId) {
     return this.request("submitAttendance", {
-      rollNumber: rollNumber.trim(),
-      classId: classId
+      rollNumber: String(rollNumber ?? "").trim(),
+      classId: String(classId ?? "").trim()
     });
   },
 
