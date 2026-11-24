@@ -1256,6 +1256,8 @@ button, input, select, textarea {
 @media (max-width: 900px) {
   .admin-sidebar {
     transform: translateX(-100%);
+    width: min(280px, 85vw);
+    box-shadow: var(--shadow-xl);
   }
   .admin-sidebar.open {
     transform: translateX(0);
@@ -1266,24 +1268,232 @@ button, input, select, textarea {
   .mobile-menu-btn {
     display: block;
   }
+  .admin-content {
+    padding: 20px 16px;
+  }
+  .admin-topbar {
+    padding: 0 16px;
+  }
+  .topbar-right {
+    gap: 8px;
+  }
+  #topbarServerTime {
+    display: none;
+  }
 }
 
 @media (max-width: 600px) {
+  body {
+    overflow-x: hidden;
+  }
+  .landing-wrapper {
+    padding: 16px;
+  }
+  .landing-header {
+    align-items: flex-start;
+  }
+  .landing-header > div:last-child {
+    max-width: 120px;
+    text-align: right;
+  }
+  .landing-hero {
+    width: 100%;
+    margin: 28px auto;
+  }
   .landing-hero h1 {
-    font-size: 2rem;
+    font-size: 1.75rem;
+  }
+  .landing-hero p {
+    font-size: 1rem;
+    margin-bottom: 24px;
+  }
+  .portal-cards-grid {
+    width: 100%;
+    grid-template-columns: minmax(0, 520px);
+  }
+  .portal-card {
+    padding: 24px 20px;
+  }
+  .student-header {
+    padding: 12px;
+  }
+  .student-header-inner {
+    gap: 8px;
+  }
+  .student-header .brand-badge > div:last-child span {
+    display: none;
+  }
+  .header-time-pill {
+    font-size: 0.72rem;
+    padding: 5px 8px;
+  }
+  .student-container {
+    margin: 12px auto;
+    padding: 0 12px;
+  }
+  .status-card,
+  .class-info-card,
+  .attendance-box {
+    border-radius: var(--radius-md);
+  }
+  .status-card {
+    padding: 16px;
+  }
+  .attendance-box {
+    padding: 20px 16px;
+  }
+  .student-verified-banner {
+    gap: 10px;
+  }
+  .verified-avatar {
+    width: 40px;
+    height: 40px;
+  }
+  .btn-large {
+    min-height: 52px;
   }
   .meta-grid {
     grid-template-columns: 1fr;
   }
+  .receipt-row {
+    gap: 12px;
+  }
+  .receipt-row strong {
+    text-align: right;
+  }
+  .login-card {
+    padding: 28px 20px;
+  }
+  .admin-topbar {
+    height: 60px;
+  }
+  .page-title {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 1rem;
+  }
+  .status-indicator-badge {
+    max-width: 118px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .admin-content {
+    padding: 16px 12px;
+  }
+  .attendance-control-banner {
+    padding: 16px;
+  }
+  .control-banner-info {
+    width: 100%;
+  }
   .stats-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
+  }
+  .stat-card {
+    padding: 16px;
   }
   .control-buttons-group {
     width: 100%;
+    flex-direction: column;
   }
   .btn-ctrl-enable, .btn-ctrl-disable {
     flex: 1;
     justify-content: center;
+    width: 100%;
+  }
+  .panel-header,
+  .modal-header {
+    padding: 16px;
+  }
+  .panel-actions,
+  .panel-actions .form-input,
+  .panel-actions .btn-portal {
+    width: 100% !important;
+  }
+  .panel-actions {
+    align-items: stretch;
+  }
+  .data-table th,
+  .data-table td {
+    padding: 10px 12px;
+  }
+  .modal-overlay {
+    padding: 8px;
+  }
+  .modal-content {
+    max-height: 94vh;
+  }
+  .modal-body,
+  .modal-footer {
+    padding: 16px;
+  }
+  .modal-footer {
+    flex-direction: column-reverse;
+  }
+  .modal-footer .btn-portal {
+    width: 100% !important;
+  }
+  .toast-container {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+  }
+  .toast {
+    min-width: 0;
+    max-width: none;
+    width: 100%;
+  }
+  #panel-attendance > .panel-card:first-child > div,
+  #panel-attendance > .panel-card:first-child > div > div {
+    width: 100% !important;
+  }
+  #panel-attendance > .panel-card:first-child > div {
+    padding: 16px !important;
+  }
+  #panel-attendance > .panel-card:first-child > div > div:last-child {
+    display: grid !important;
+    grid-template-columns: 1fr;
+  }
+  #panel-attendance > .panel-card:first-child button {
+    width: 100% !important;
+  }
+  #panel-excel > .panel-card > div[style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+  }
+  .modal-content [style*="grid-template-columns: 1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .brand-badge {
+    gap: 8px;
+  }
+  .brand-logo-icon {
+    width: 40px;
+    height: 40px;
+  }
+  .landing-header > div:last-child {
+    display: none;
+  }
+  .student-header-inner {
+    align-items: center;
+  }
+  .header-time-pill {
+    max-width: 145px;
+  }
+  .status-icon-box {
+    width: 38px;
+    height: 38px;
+  }
+  .receipt-row {
+    flex-direction: column;
+  }
+  .receipt-row strong {
+    text-align: left;
   }
 }
 
